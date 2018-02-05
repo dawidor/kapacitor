@@ -511,3 +511,10 @@ func (n *chainnode) Sideload() *SideloadNode {
 	n.linkChild(s)
 	return s
 }
+
+// Create a new KafkaOutNode as a child of the calling node.
+func (c *chainnode) HouseDBOut() *KafkaOutNode {
+	h := newKafkaOutNode(c.Provides())
+	c.linkChild(h)
+	return h
+}

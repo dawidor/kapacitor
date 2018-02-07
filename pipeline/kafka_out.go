@@ -3,22 +3,22 @@ package pipeline
 // A KafkaOut will take the incoming data stream and publish to kafka instance.
 type KafkaOutNode struct {
 	// Include the generic node implementation.
-	node
-
-	// URL for connecting to kafka instance
-	Url string
+	chainnode
 
 	// topic name
-	topic string
+	Topic string
+	Url string
 }
 
+
 // Create a new KafkaOutNode that accepts any edge type.
-func newKafkaOutNode(wants EdgeType) *KafkaOutNode {
+func newKafkaOutNode(wants EdgeType, url string, topic string) *KafkaOutNode {
+
+
+
 	return &KafkaOutNode{
-		node: node{
-			desc: "kafkaOut",
-			wants: wants,
-			provides: NoEdge,
-		},
+		chainnode: newBasicChainNode("kafkaOut", wants, wants),
+		Topic:  topic,
+		Url: url,
 	}
 }

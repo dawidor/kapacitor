@@ -495,6 +495,8 @@ func (et *ExecutingTask) createNode(p pipeline.Node, d NodeDiagnostic) (n Node, 
 		n, err = newInfluxQLNode(et, t, d)
 	case *pipeline.LogNode:
 		n, err = newLogNode(et, t, d)
+	case *pipeline.KafkaOutNode:
+		n, err = newKafkaOutNode(et, t)
 	case *pipeline.DefaultNode:
 		n, err = newDefaultNode(et, t, d)
 	case *pipeline.DeleteNode:

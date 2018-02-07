@@ -11,8 +11,8 @@ type KafkaOutNode struct {
 }
 
 // NewLog creates a LogNode function builder
-func newKafkaOutNode(parents []ast.Node) *LogmeNode {
-	return &LogmeNode{
+func newKafkaOutNode(parents []ast.Node) *KafkaOutNode {
+	return &KafkaOutNode{
 		Function{
 			Parents: parents,
 		},

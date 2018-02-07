@@ -40,6 +40,7 @@ import (
 	"github.com/influxdata/kapacitor/tick/stateful"
 	"github.com/influxdata/kapacitor/timer"
 	"github.com/influxdata/kapacitor/udf"
+	"github.com/influxdata/kapacitor/services/kafka"
 )
 
 const (
@@ -117,6 +118,10 @@ type TaskMaster struct {
 	MQTTService interface {
 		Handler(mqtt.HandlerConfig, ...keyvalue.T) alert.Handler
 	}
+	KafkaService interface {
+		Handler(kafka.HandlerConfig, ...keyvalue.T) alert.Handler
+	}
+
 
 	OpsGenieService interface {
 		Global() bool

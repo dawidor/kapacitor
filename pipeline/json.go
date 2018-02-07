@@ -193,7 +193,7 @@ func init() {
 		"influxdbOut":       func(parent chainnodeAlias) Node { return parent.InfluxDBOut() },
 		"httpPost":          func(parent chainnodeAlias) Node { return parent.HttpPost() },
 		"httpOut":           func(parent chainnodeAlias) Node { return parent.HttpOut("") },
-		"kafkaOut":           func(parent chainnodeAlias) Node { return parent.KafkaOut() },
+		"kafkaOut":           func(parent chainnodeAlias) Node { return parent.HttpOut("") },
 		"flatten":           func(parent chainnodeAlias) Node { return parent.Flatten() },
 		"eval":              func(parent chainnodeAlias) Node { return parent.Eval() },
 		"derivative":        func(parent chainnodeAlias) Node { return parent.Derivative("") },
@@ -538,7 +538,7 @@ type chainnodeAlias interface {
 	Join(...Node) *JoinNode
 	K8sAutoscale() *K8sAutoscaleNode
 	KapacitorLoopback() *KapacitorLoopbackNode
-	KafkaOut() *KafkaOutNode
+	KafkaOut(string, string) *KafkaOutNode
 	Last(string) *InfluxQLNode
 	Log() *LogNode
 	Logme() *LogmeNode

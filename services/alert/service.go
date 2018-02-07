@@ -29,6 +29,7 @@ import (
 	"github.com/influxdata/kapacitor/services/victorops"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	"github.com/influxdata/kapacitor/services/kafka"
 )
 
 type Diagnostic interface {
@@ -83,6 +84,10 @@ type Service struct {
 	MQTTService interface {
 		Handler(mqtt.HandlerConfig, ...keyvalue.T) alert.Handler
 	}
+	KafkaService interface {
+		Handler(kafka.HandlerConfig, ...keyvalue.T) alert.Handler
+	}
+
 	OpsGenieService interface {
 		Handler(opsgenie.HandlerConfig, ...keyvalue.T) alert.Handler
 	}
@@ -795,6 +800,15 @@ func (s *Service) createHandlerFromSpec(spec HandlerSpec) (handler, error) {
 		}
 		h = s.MQTTService.Handler(c, ctx...)
 		h = newExternalHandler(h)
+	case "kafka":
+		c := kafka.HandlerConfig{}
+		err = decodeOptions(spec.Options, &c)
+		if err != nil {
+			return handler{}, err
+		}
+		h = s.KafkaService.Handler(c, ctx...)
+		h = newExternalHandler(h)
+
 	case "opsgenie":
 		c := opsgenie.HandlerConfig{}
 		err = decodeOptions(spec.Options, &c)

@@ -39,6 +39,7 @@ import (
 	"github.com/influxdata/kapacitor/udf"
 	"github.com/influxdata/kapacitor/uuid"
 	plog "github.com/prometheus/common/log"
+	"github.com/influxdata/kapacitor/services/kafka"
 )
 
 func Err(l Logger, msg string, err error, ctx []keyvalue.T) {
@@ -802,6 +803,51 @@ func (h *MQTTHandler) WithContext(ctx ...keyvalue.T) mqtt.Diagnostic {
 		l: h.l.With(fields...),
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+type KafkaHandler struct {
+	l Logger
+}
+
+func (h *KafkaHandler) Error(msg string, err error) {
+	h.l.Error(msg, Error(err))
+}
+
+func (h *KafkaHandler) CreatingAlertHandler(c kafka.HandlerConfig) {
+	qos, _ := c.QoS.MarshalText()
+	h.l.Debug("creating kafka handler",
+		String("broker_name", c.BrokerName),
+		String("topic", c.Topic),
+		Bool("retained", c.Retained),
+		String("qos", string(qos)),
+	)
+}
+
+func (h *KafkaHandler) HandlingEvent() {
+	h.l.Debug("handling event")
+}
+
+func (h *KafkaHandler) WithContext(ctx ...keyvalue.T) kafka.Diagnostic {
+	fields := logFieldsFromContext(ctx)
+
+	return &KafkaHandler{
+		l: h.l.With(fields...),
+	}
+}
+
+
 
 // Talk handler
 

@@ -58,6 +58,7 @@ import (
 	"github.com/influxdata/influxdb/services/collectd"
 	"github.com/influxdata/influxdb/services/graphite"
 	"github.com/influxdata/influxdb/services/opentsdb"
+	"github.com/influxdata/kapacitor/services/kafka"
 )
 
 // Config represents the configuration format for the kapacitord binary.
@@ -80,6 +81,7 @@ type Config struct {
 	// Alert handlers
 	Alerta    alerta.Config    `toml:"alerta" override:"alerta"`
 	HipChat   hipchat.Config   `toml:"hipchat" override:"hipchat"`
+	KAFKA     kafka.Configs    `toml:"kafka" override:"kafka,element-key=name"`
 	MQTT      mqtt.Configs     `toml:"mqtt" override:"mqtt,element-key=name"`
 	OpsGenie  opsgenie.Config  `toml:"opsgenie" override:"opsgenie"`
 	PagerDuty pagerduty.Config `toml:"pagerduty" override:"pagerduty"`
@@ -144,6 +146,7 @@ func NewConfig() *Config {
 
 	c.Alerta = alerta.NewConfig()
 	c.HipChat = hipchat.NewConfig()
+	c.KAFKA = kafka.Configs{kafka.NewConfig()}
 	c.MQTT = mqtt.Configs{mqtt.NewConfig()}
 	c.OpsGenie = opsgenie.NewConfig()
 	c.PagerDuty = pagerduty.NewConfig()
@@ -256,6 +259,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.HipChat.Validate(); err != nil {
 		return errors.Wrap(err, "hipchat")
+	}
+	if err := c.KAFKA.Validate(); err != nil {
+		return errors.Wrap(err, "kafka")
 	}
 	if err := c.MQTT.Validate(); err != nil {
 		return errors.Wrap(err, "mqtt")

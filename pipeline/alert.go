@@ -361,6 +361,10 @@ type AlertNodeData struct {
 	// tick:ignore
 	MQTTHandlers []*MQTTHandler `tick:"Mqtt" json:"mqtt"`
 
+	// Send alert to Kafka
+	// tick:ignore
+	KafkaHandlers []*KafkaHandler `tick:"Kafka" json:"kafka"`
+
 	// Send alert using SNMPtraps.
 	// tick:ignore
 	SNMPTrapHandlers []*SNMPTrapHandler `tick:"SnmpTrap" json:"snmpTrap"`
@@ -1107,6 +1111,45 @@ type MQTTHandler struct {
 	// clients that were not connected to the broker at the time of the alert.
 	Retained bool `json:"retained"`
 }
+
+// Send alert to an MQTT broker
+// tick:property
+func (n *AlertNodeData) Kafka(topic string) *KafkaHandler {
+	m := &KafkaHandler{
+		AlertNodeData: n,
+		Topic:         topic,
+	}
+	n.KafkaHandlers = append(n.KafkaHandlers, m)
+	return m
+}
+
+
+// tick:embedded:AlertNode.Mqtt
+type KafkaHandler struct {
+	*AlertNodeData `json:"-"`
+
+	// BrokerName is the name of the configured MQTT broker to use when publishing the alert.
+	// If empty defaults to the configured default broker.
+	BrokerName string `json:"brokerName"`
+
+	// The topic where alerts will be dispatched to
+	Topic string `json:"topic"`
+
+	// The Qos that will be used to deliver the alerts
+	//
+	// Valid values are:
+	//
+	//    * 0 - At most once delivery
+	//    * 1 - At least once delivery
+	//    * 2 - Exactly once delivery
+	//
+	Qos int64 `json:"qos"`
+
+	// Retained indicates whether this alert should be delivered to
+	// clients that were not connected to the broker at the time of the alert.
+	Retained bool `json:"retained"`
+}
+
 
 // Send the alert to Sensu.
 //

@@ -256,6 +256,13 @@ func (s *Service) NewMQTTHandler() *MQTTHandler {
 	}
 }
 
+func (s *Service) NewKafkaHandler() *KafkaHandler {
+	return &KafkaHandler{
+		l: s.Logger.With(String("service", "kafka")),
+	}
+}
+
+
 func (s *Service) NewTalkHandler() *TalkHandler {
 	return &TalkHandler{
 		l: s.Logger.With(String("service", "talk")),

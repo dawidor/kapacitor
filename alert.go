@@ -32,6 +32,7 @@ import (
 	"github.com/influxdata/kapacitor/tick/ast"
 	"github.com/influxdata/kapacitor/tick/stateful"
 	"github.com/pkg/errors"
+	"github.com/influxdata/kapacitor/services/kafka"
 )
 
 const (
@@ -395,6 +396,17 @@ func newAlertNode(et *ExecutingTask, n *pipeline.AlertNode, d NodeDiagnostic) (a
 		h := et.tm.MQTTService.Handler(c, ctx...)
 		an.handlers = append(an.handlers, h)
 	}
+
+	for _, m := range n.KafkaHandlers {
+		c := kafka.HandlerConfig{
+			BrokerName: m.BrokerName,
+			Topic:      m.Topic,
+			Retained:   m.Retained,
+		}
+		h := et.tm.KafkaService.Handler(c, ctx...)
+		an.handlers = append(an.handlers, h)
+	}
+
 	// Parse level expressions
 	an.levels = make([]stateful.Expression, alert.Critical+1)
 	an.scopePools = make([]stateful.ScopePool, alert.Critical+1)

@@ -105,10 +105,10 @@ func (s *Service) Open() error {
 	defer s.mu.Unlock()
 	for name, client := range s.clients {
 		if client == nil {
-			return fmt.Errorf("no client found for MQTT broker %q", name)
+			return fmt.Errorf("no client found for Kafka broker %q", name)
 		}
 		if err := client.Connect(); err != nil {
-			return errors.Wrapf(err, "failed to connect to MQTT broker %q", name)
+			return errors.Wrapf(err, "failed to connect to Kafka broker %q", name)
 		}
 	}
 	return nil
@@ -125,21 +125,21 @@ func (s *Service) Close() error {
 	return nil
 }
 
-func (s *Service) Alert(brokerName, topic string, qos QoSLevel, retained bool, message string) error {
+func (s *Service) Alert(brokerName, topic string, qos QoSLevel, retained bool, message string, data alert.EventData) error {
 	log.Println("D! ALERT", topic, message)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if topic == "" {
-		return fmt.Errorf("missing MQTT topic")
+		return fmt.Errorf("missing Kafka topic")
 	}
 	if brokerName == "" {
 		brokerName = s.defaultBrokerName
 	}
 	client := s.clients[brokerName]
 	if client == nil {
-		return fmt.Errorf("unknown MQTT broker %q", brokerName)
+		return fmt.Errorf("unknown Kafka broker %q", brokerName)
 	}
-	return client.Publish(topic, retained, []byte(message))
+	return client.Publish(topic, retained, message, data)
 }
 
 func (s *Service) Update(newConfigs []interface{}) error {
@@ -233,8 +233,20 @@ type handler struct {
 
 func (h *handler) Handle(event alert.Event) {
 	h.diag.HandlingEvent()
-	if err := h.s.Alert(h.c.BrokerName, h.c.Topic, h.c.QoS, h.c.Retained, event.State.Message); err != nil {
-		h.diag.Error("failed to post message to MQTT broker", err)
+	//TODO: do not forget to remove it ;P
+	fmt.Println(h.c.BrokerName)
+	fmt.Println(h.c.Topic)
+	fmt.Println(event.State.Message)
+	fmt.Println("")
+	fmt.Println(event)
+	fmt.Println("1")
+	fmt.Println(event.AlertData())
+	fmt.Println("2")
+	fmt.Println(event.Data)
+	fmt.Println("3")
+
+	if err := h.s.Alert(h.c.BrokerName, h.c.Topic, h.c.QoS, h.c.Retained, event.State.Message, event.Data); err != nil {
+		h.diag.Error("failed to post message to Kafka broker", err)
 	}
 }
 
@@ -251,7 +263,7 @@ func (s *Service) TestOptions() interface{} {
 	defer s.mu.RUnlock()
 	return &testOptions{
 		BrokerName: s.defaultBrokerName,
-		Message:    "test MQTT message",
+		Message:    "test Kafka message",
 	}
 }
 
@@ -260,5 +272,6 @@ func (s *Service) Test(o interface{}) error {
 	if !ok {
 		return fmt.Errorf("unexpected options type %T", options)
 	}
-	return s.Alert(options.BrokerName, options.Topic, options.QoS, options.Retained, options.Message)
+
+	return s.Alert(options.BrokerName, options.Topic, options.QoS, options.Retained, options.Message, alert.EventData{Name: "ss"})
 }

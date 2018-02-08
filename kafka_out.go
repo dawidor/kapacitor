@@ -8,7 +8,7 @@ import (
 	goavro "gopkg.in/linkedin/goavro.v1"
 	"github.com/influxdata/kapacitor/edge"
 	"github.com/influxdata/kapacitor/models"
-	"github.com/Shopify/sarama"
+	"github.com/Shopify/sarama" //kafka client
 	"strconv"
 	"time"
 )
@@ -72,6 +72,8 @@ var recordSchemaJSON = `
 // Create a new  NoOpNode which does nothing with the data and just passes it through.
 func newKafkaOutNode(et *ExecutingTask, n *pipeline.KafkaOutNode) (*KafkaOutNode, error) {
 
+	fmt.Println("-----------------------------test1")
+
 	nn := &KafkaOutNode{
 		node:        node{Node: n, et: et},
 		topic: n.Topic,
@@ -84,6 +86,8 @@ func newKafkaOutNode(et *ExecutingTask, n *pipeline.KafkaOutNode) (*KafkaOutNode
 }
 
 func (n *KafkaOutNode) runKafkaOut(bb2 []byte) error {
+
+	fmt.Println("-----------------------------test2")
 
 	for m, ok := n.ins[0].Emit(); ok; m, ok = n.ins[0].Emit() {
 

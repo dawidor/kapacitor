@@ -10,9 +10,7 @@ type Config struct {
 	Enabled bool   `toml:"enabled" override:"enabled"`
 	Name    string `toml:"name" override:"name"`
 	Default bool   `toml:"default" override:"default"`
-	// URL of the MQTT Broker.
-	// Valid URLs include tcp://host:port, ws://host:port or ssl://host:port.
-	// If using ssl://host:port, one must also specify the SSL configuration options.
+	// URL of the KAFKA Broker.
 	URL string `toml:"url" override:"url"`
 
 	// Path to CA file
@@ -32,16 +30,17 @@ type Config struct {
 
 	// newClientF is a function that returns a client for a given config.
 	// It is used exclusively for testing.
-	newClientF func(c Config) (Client, error) `override:"-"`
+	newClientF func(c Config) (*KafkaClient, error) `override:"-"`
 }
 
 // SetNewClientF sets the newClientF on a Config.
 // It is used exclusively for testing.
-func (c *Config) SetNewClientF(fn func(c Config) (Client, error)) {
+func (c *Config) SetNewClientF(fn func(c Config) (*KafkaClient, error)) {
 	c.newClientF = fn
 }
 
 func NewConfig() Config {
+
 	return Config{
 		Enabled: false,
 		Name:    "default",
@@ -50,18 +49,18 @@ func NewConfig() Config {
 
 func (c Config) Validate() error {
 	if c.Name == "" {
-		return errors.New("must specify a name for the mqtt broker")
+		return errors.New("must specify a name for the kafka broker")
 	}
 	if c.Enabled {
 		if c.URL == "" {
-			return errors.New("must specify a url for mqtt service")
+			return errors.New("must specify a url for kafka service")
 		}
 	}
 	return nil
 }
 
 // NewClient creates a new client based off this configuration.
-func (c Config) NewClient() (Client, error) {
+func (c Config) NewClient() (*KafkaClient, error) {
 	newC := newClient
 	if c.newClientF != nil {
 		newC = c.newClientF

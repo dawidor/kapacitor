@@ -3,19 +3,19 @@ package kafka
 import (
 	//"fmt"
 	"time"
-	//"bytes"
-	//"strconv"
-	//"encoding/json"
-	//"github.com/influxdata/kapacitor/tlsconfig"
-
-	"fmt"
-	"github.com/Shopify/sarama"
-	//"go/token"
 	"strconv"
-//	"bytes"
+	"encoding/json"
+	"github.com/influxdata/kapacitor/tlsconfig"
+	"github.com/Shopify/sarama"
+
 	"github.com/influxdata/kapacitor/alert"
-	//goavro "gopkg.in/linkedin/goavro.v1"
-	//"bytes"
+	goavro "gopkg.in/linkedin/goavro.v1"
+	"crypto/tls"
+	"io/ioutil"
+	"crypto/x509"
+	"log"
+	"bytes"
+	"fmt"
 )
 
 var recordSchemaJSON = `
@@ -26,20 +26,15 @@ var recordSchemaJSON = `
 	  "namespace": "com.avro.kapacitor.kafka",
 	  "fields": [
 		{
-		  "doc": "Database name",
-		  "type": "string",
-		  "name": "database"
-		},
-		{
-		  "doc": "retention name",
-		  "type": "string",
-		  "name": "retention",
-   		  "default": "null"
-		},
-		{
 		  "doc": "metric name",
 		  "type": "string",
 		  "name": "name"
+		},
+		{
+		  "doc": "tick script name",
+		  "type": "string",
+		  "name": "taskname",
+ 		  "default": "null"
 		},
 		{
 		  "doc": "fields",
@@ -59,9 +54,22 @@ var recordSchemaJSON = `
 		  "name": "timestamp"
 		},
 		{
-		  "doc": "event type",
+		  "doc": "event level",
 		  "type": "string",
-		  "name": "type"
+		  "name": "level",
+ 		  "default": "null"
+		},
+		{
+		  "doc": "event duration",
+		  "type": "string",
+		  "name": "duration",
+ 		  "default": "null"
+		},
+		{
+		  "doc": "event id",
+		  "type": "string",
+		  "name": "id",
+ 		  "default": "null"
 		}
 	  ]
 	}
@@ -70,62 +78,13 @@ var recordSchemaJSON = `
 
 // Client describes an immutable Kafka client
 type Client interface {
-	Connect() error
+	Connect(Url string) error
 	Disconnect()
-	Publish(topic string, retained bool, message string, data alert.EventData) error
+	Publish(topic string, state alert.EventState, data alert.EventData) error
 }
-/*
 
-			timestamp := strconv.FormatInt(pm.Time().UTC().UnixNano(), 10)
-
-			var tagsMapNew map[string]interface{} = make(map[string]interface{})
-			var tags models.Tags = pm.Tags()
-			var tagsMap map[string]string = tags
-			for key, value := range tagsMap {
-				tagsMapNew[key] = value
-			}
-
-			var fieldsMap map[string]interface{} = pm.Fields()
-
-			//j, err := json.Marshal(mainMap)
-			//fmt.Printf(string(j), err)
-			//fmt.Println("")
-
-			someRecord, err := goavro.NewRecord(goavro.RecordSchema(recordSchemaJSON))
-			if err != nil {
-				panic(err)
-			}
-
-			someRecord.Set("database", v.Database())
-			someRecord.Set("retention", v.RetentionPolicy())
-			someRecord.Set("name", v.Name())
-			someRecord.Set("fields", fieldsMap)
-			someRecord.Set("tags", tagsMapNew)
-			someRecord.Set("timestamp", timestamp)
-			someRecord.Set("type", v.Type().String())
-
-			codec, err := goavro.NewCodec(recordSchemaJSON)
-			if err != nil {
-				panic(err)
-			}
-
-			bb := new(bytes.Buffer)
-			if err = codec.Encode(bb, someRecord); err != nil {
-				panic(err)
-			}
-
-			actual := bb.Bytes()
-
-			dataString := string(actual)
-
-
-
-*/
 // newClient produces a disconnected MQTT client
 var newClient = func(c Config) (*KafkaClient, error) {
-
-	fmt.Println("--------------------------------------------------1")
-
 	config := sarama.NewConfig()
 	config.Producer.Retry.Max = 5
 	config.Producer.RequiredAcks = sarama.WaitForAll
@@ -136,16 +95,23 @@ var newClient = func(c Config) (*KafkaClient, error) {
 		config.ClientID = c.Name
 	}
 
+	if c.Username != "" {
+		config.Net.SASL.User = c.Username
+	}
+	if c.Password  != "" {
+		config.Net.SASL.Password = c.Password
+	}
+
 	//opts.AddBroker(c.URL)
-	//opts.SetUsername(c.Username)
-	//opts.SetPassword(c.Password)
 
-	//tlsConfig, err := tlsconfig.Create(c.SSLCA, c.SSLCert, c.SSLKey, c.InsecureSkipVerify)
-	//if err != nil {
-	//	return nil, err
-	//}
+	tlsConfig, err := tlsconfig.Create(c.SSLCA, c.SSLCert, c.SSLKey, c.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
 
-	//opts.SetTLSConfig(tlsConfig)
+	if tlsConfig!=nil {
+		config.Net.TLS.Config = tlsConfig
+	}
 
 	return &KafkaClient{
 		config: config,
@@ -154,38 +120,58 @@ var newClient = func(c Config) (*KafkaClient, error) {
 	return nil, nil
 }
 
+func createTlsConfiguration(c Config) (t *tls.Config) {
+
+	if c.SSLCert != "" && c.SSLKey != "" && c.SSLCA != "" {
+		cert, err := tls.LoadX509KeyPair(c.SSLCert, c.SSLKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		caCert, err := ioutil.ReadFile(c.SSLCA)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		t = &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			RootCAs:            caCertPool,
+			InsecureSkipVerify: c.InsecureSkipVerify,
+		}
+	}
+	// will be nil by default if nothing is provided
+	return t
+}
+
+
 type KafkaClient struct {
-	//opts   *pahomqtt.ClientOptions
-	//client pahomqtt.Client
 	config * sarama.Config
 	producer sarama.AsyncProducer
 }
 
-// DefaultQuiesceTimeout is the duration the client will wait for outstanding
-// messages to be published before forcing a disconnection
-const DefaultQuiesceTimeout time.Duration = 250 * time.Millisecond
+func (k *KafkaClient) Connect(Url string) error {
 
-func (k *KafkaClient) Connect() error {
-	brokers := []string{"godzilla-kafka-1.uat.iggroup.local:9092"}
+
+	brokers := []string{Url}
 	producer, err := sarama.NewAsyncProducer(brokers, k.config)
 	k.producer = producer
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("--------------------------------------------------6s")
 
 	return err
 }
 
 func (p *KafkaClient) Disconnect() {
-	fmt.Println("--------------------------------------------------3")
 	if err := p.producer.Close(); err != nil {
 		panic(err)
 	}
 }
 
-func (p *KafkaClient) Publish(topic string, retained bool, message string, data alert.EventData) error {
-	fmt.Println("--------------------------------------------------4s")
+func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.EventData) error {
 
 
 
@@ -193,33 +179,72 @@ func (p *KafkaClient) Publish(topic string, retained bool, message string, data 
 	//fmt.Printf(string(j), err)
 	//fmt.Println("")
 
-	//someRecord, err := goavro.NewRecord(goavro.RecordSchema(recordSchemaJSON))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
+	someRecord, err := goavro.NewRecord(goavro.RecordSchema(recordSchemaJSON))
+	if err != nil {
+		panic(err)
+	}
+
+
+
+
+
+	timestamp := strconv.FormatInt(state.Time.UTC().UnixNano(), 10)
+
+
+
+	var tagsMapNew map[string]interface{} = make(map[string]interface{})
+
+	var tagsMap map[string]string = data.Tags
+	for key, value := range tagsMap {
+		tagsMapNew[key] = value
+	}
+
+
+
+
+	var fieldsMap map[string]interface{} = data.Fields
+
+	var fieldsMapNew map[string]string = make(map[string]string)
+	for key, value := range fieldsMap {
+		fieldsMapNew[key] = fmt.Sprintf("%v", value)
+	}
+
+
+
+
 	//someRecord.Set("database", data.Database())
 	//someRecord.Set("retention", v.RetentionPolicy())
-	//someRecord.Set("name", v.Name())
-	//someRecord.Set("fields", fieldsMap)
-	//someRecord.Set("tags", tagsMapNew)
-	//someRecord.Set("timestamp", timestamp)
-	//someRecord.Set("type", v.Type().String())
-	//
-	//codec, err := goavro.NewCodec(recordSchemaJSON)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//bb := new(bytes.Buffer)
-	//if err = codec.Encode(bb, someRecord); err != nil {
-	//	panic(err)
-	//}
-	//
-	////actual := bb.Bytes()
-	//actual := message
-	//
-	//dataString := string(actual)
+	someRecord.Set("name", data.Name)
+	someRecord.Set("taskname", data.TaskName)
+	//someRecord.Set("fields", fieldsMapNew)
+	//someRecord.Set("tags", tagsMapNew )
+	someRecord.Set("message", state.Message)
+	someRecord.Set("timestamp", timestamp)
+	//someRecord.Set("details", state.Details)
+	someRecord.Set("level", state.Level.String())
+	someRecord.Set("duration", state.Duration.String())
+	someRecord.Set("id", state.ID)
+
+
+	j, err := json.Marshal(someRecord.Fields)
+	fmt.Println("")
+	fmt.Printf(string(j), err)
+	fmt.Println("")
+
+
+	codec, err := goavro.NewCodec(recordSchemaJSON)
+	if err != nil {
+		panic(err)
+	}
+
+	bb := new(bytes.Buffer)
+	fmt.Println(bb)
+	if err = codec.Encode(bb, someRecord); err != nil {
+		panic(err)
+	}
+
+	actual := bb.Bytes()
+	dataString := string(actual)
 
 
 	strTime := strconv.Itoa(int(time.Now().Unix()))
@@ -227,7 +252,7 @@ func (p *KafkaClient) Publish(topic string, retained bool, message string, data 
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Key:   sarama.StringEncoder(strTime),
-		Value: sarama.StringEncoder("adsdas"),
+		Value: sarama.StringEncoder(dataString),
 	}
 
 	p.producer.Input() <- msg

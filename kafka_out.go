@@ -72,8 +72,6 @@ var recordSchemaJSON = `
 // Create a new  NoOpNode which does nothing with the data and just passes it through.
 func newKafkaOutNode(et *ExecutingTask, n *pipeline.KafkaOutNode) (*KafkaOutNode, error) {
 
-	fmt.Println("-----------------------------test1")
-
 	nn := &KafkaOutNode{
 		node:        node{Node: n, et: et},
 		topic: n.Topic,
@@ -86,8 +84,6 @@ func newKafkaOutNode(et *ExecutingTask, n *pipeline.KafkaOutNode) (*KafkaOutNode
 }
 
 func (n *KafkaOutNode) runKafkaOut(bb2 []byte) error {
-
-	fmt.Println("-----------------------------test2")
 
 	for m, ok := n.ins[0].Emit(); ok; m, ok = n.ins[0].Emit() {
 

@@ -826,12 +826,10 @@ func (h *KafkaHandler) Error(msg string, err error) {
 }
 
 func (h *KafkaHandler) CreatingAlertHandler(c kafka.HandlerConfig) {
-	qos, _ := c.QoS.MarshalText()
+
 	h.l.Debug("creating kafka handler",
 		String("broker_name", c.BrokerName),
 		String("topic", c.Topic),
-		Bool("retained", c.Retained),
-		String("qos", string(qos)),
 	)
 }
 

@@ -22,19 +22,17 @@ type Config struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool `toml:"insecure-skip-verify" override:"insecure-skip-verify"`
 
-	// ClientID is the unique ID advertised to the MQTT broker from this client.
+	// ClientID unique
 	// Defaults to Name if empty.
 	ClientID string `toml:"client-id" override:"client-id"`
 	Username string `toml:"username" override:"username"`
 	Password string `toml:"password" override:"password,redact"`
 
-	// newClientF is a function that returns a client for a given config.
-	// It is used exclusively for testing.
+	// newClientF returns kafkaClient
 	newClientF func(c Config) (*KafkaClient, error) `override:"-"`
 }
 
-// SetNewClientF sets the newClientF on a Config.
-// It is used exclusively for testing.
+// SetNewClientF sets the newClientF on given Config.
 func (c *Config) SetNewClientF(fn func(c Config) (*KafkaClient, error)) {
 	c.newClientF = fn
 }

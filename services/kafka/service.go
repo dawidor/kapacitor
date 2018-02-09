@@ -17,50 +17,6 @@ type Diagnostic interface {
 	HandlingEvent()
 }
 
-// QoSLevel indicates the quality of service for messages delivered to a
-// broker.
-type QoSLevel byte
-
-var (
-	ErrInvalidQoS = errors.New("invalid QoS")
-)
-
-func (q *QoSLevel) UnmarshalText(text []byte) error {
-	switch string(text) {
-	case "at-most-once":
-		*q = AtMostOnce
-	case "at-least-once":
-		*q = AtLeastOnce
-	case "exactly-one":
-		*q = ExactlyOnce
-	default:
-		return ErrInvalidQoS
-	}
-	return nil
-}
-
-func (q QoSLevel) MarshalText() (text []byte, err error) {
-	switch q {
-	case AtMostOnce:
-		return []byte("at-most-once"), nil
-	case AtLeastOnce:
-		return []byte("at-least-once"), nil
-	case ExactlyOnce:
-		return []byte("exactly-once"), nil
-	default:
-		return []byte{}, ErrInvalidQoS
-	}
-}
-
-const (
-	// best effort delivery. "fire and forget"
-	AtMostOnce QoSLevel = iota
-	// guarantees delivery to at least one receiver. May deliver multiple times.
-	AtLeastOnce
-	// guarantees delivery only once. Safest and slowest.
-	ExactlyOnce
-)
-
 type Service struct {
 	diag Diagnostic
 
@@ -107,7 +63,9 @@ func (s *Service) Open() error {
 		if client == nil {
 			return fmt.Errorf("no client found for Kafka broker %q", name)
 		}
-		if err := client.Connect(); err != nil {
+
+
+		if err := client.Connect(s.configs[name].URL); err != nil {
 			return errors.Wrapf(err, "failed to connect to Kafka broker %q", name)
 		}
 	}
@@ -125,8 +83,8 @@ func (s *Service) Close() error {
 	return nil
 }
 
-func (s *Service) Alert(brokerName, topic string, qos QoSLevel, retained bool, message string, data alert.EventData) error {
-	log.Println("D! ALERT", topic, message)
+func (s *Service) Alert(brokerName, topic string, state alert.EventState, data alert.EventData) error {
+	log.Println("D! ALERT", topic, state.Message)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if topic == "" {
@@ -139,7 +97,7 @@ func (s *Service) Alert(brokerName, topic string, qos QoSLevel, retained bool, m
 	if client == nil {
 		return fmt.Errorf("unknown Kafka broker %q", brokerName)
 	}
-	return client.Publish(topic, retained, message, data)
+	return client.Publish(topic, state, data)
 }
 
 func (s *Service) Update(newConfigs []interface{}) error {
@@ -184,7 +142,7 @@ func (s *Service) update(cs Configs) error {
 				return err
 			}
 
-			if err := client.Connect(); err != nil {
+			if err := client.Connect(c.URL); err != nil {
 				return err
 			}
 			s.clients[name] = client
@@ -221,7 +179,6 @@ func (s *Service) Handler(c HandlerConfig, ctx ...keyvalue.T) alert.Handler {
 type HandlerConfig struct {
 	BrokerName string   `mapstructure:"broker-name"`
 	Topic      string   `mapstructure:"topic"`
-	QoS        QoSLevel `mapstructure:"qos"`
 	Retained   bool     `mapstructure:"retained"`
 }
 
@@ -233,19 +190,8 @@ type handler struct {
 
 func (h *handler) Handle(event alert.Event) {
 	h.diag.HandlingEvent()
-	//TODO: do not forget to remove it ;P
-	fmt.Println(h.c.BrokerName)
-	fmt.Println(h.c.Topic)
-	fmt.Println(event.State.Message)
-	fmt.Println("")
-	fmt.Println(event)
-	fmt.Println("1")
-	fmt.Println(event.AlertData())
-	fmt.Println("2")
-	fmt.Println(event.Data)
-	fmt.Println("3")
 
-	if err := h.s.Alert(h.c.BrokerName, h.c.Topic, h.c.QoS, h.c.Retained, event.State.Message, event.Data); err != nil {
+	if err := h.s.Alert(h.c.BrokerName, h.c.Topic, event.State, event.Data); err != nil {
 		h.diag.Error("failed to post message to Kafka broker", err)
 	}
 }
@@ -254,8 +200,7 @@ type testOptions struct {
 	BrokerName string   `json:"broker-name"`
 	Topic      string   `json:"topic"`
 	Message    string   `json:"message"`
-	QoS        QoSLevel `json:"qos"`
-	Retained   bool     `json:"retained"`
+
 }
 
 func (s *Service) TestOptions() interface{} {
@@ -273,5 +218,6 @@ func (s *Service) Test(o interface{}) error {
 		return fmt.Errorf("unexpected options type %T", options)
 	}
 
-	return s.Alert(options.BrokerName, options.Topic, options.QoS, options.Retained, options.Message, alert.EventData{Name: "ss"})
+	//TODO: test case
+	return s.Alert(options.BrokerName, options.Topic, alert.EventState{ID:"a111"}, alert.EventData{Name: "ss"})
 }

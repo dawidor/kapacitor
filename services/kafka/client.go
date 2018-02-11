@@ -189,22 +189,22 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 	timestamp := strconv.FormatInt(state.Time.UTC().UnixNano(), 10)
 
 
-	var tagsMap map[string]string = data.Tags
+	//var tagsMap map[string]string = data.Tags
 
 
-	var fieldsMap map[string]interface{} = data.Fields
-
-	var fieldsMapNew map[string]string = make(map[string]string)
-	for key, value := range fieldsMap {
-		fieldsMapNew[key] = fmt.Sprintf("%v..", value)
-	}
+	//var fieldsMap map[string]interface{} = data.Fields
+	//
+	//var fieldsMapNew map[string]string = make(map[string]string)
+	//for key, value := range fieldsMap {
+	//	fieldsMapNew[key] = fmt.Sprintf("%v..", value)
+	//}
 
 	//someRecord.Set("database", data.Database())
 	//someRecord.Set("retention", v.RetentionPolicy())
 	someRecord.Set("name", data.Name)
 	someRecord.Set("taskname", data.TaskName)
 	//someRecord.Set("fields", fieldsMapNew)
-	someRecord.Set("tags", tagsMap )
+	//someRecord.Set("tags", tagsMap )
 	someRecord.Set("message", state.Message)
 	someRecord.Set("timestamp", timestamp)
 	//someRecord.Set("details", state.Details)

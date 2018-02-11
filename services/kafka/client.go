@@ -196,7 +196,7 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 
 	var fieldsMapNew map[string]string = make(map[string]string)
 	for key, value := range fieldsMap {
-		fieldsMapNew[key] = fmt.Sprintf("%v", value)
+		fieldsMapNew[key] = fmt.Sprintf("%v..", value)
 	}
 
 	//someRecord.Set("database", data.Database())

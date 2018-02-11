@@ -1,13 +1,13 @@
 package kafka
 
 import (
-"fmt"
-"log"
-"sync"
+	"fmt"
+	"log"
+	"sync"
 
-"github.com/influxdata/kapacitor/alert"
-"github.com/influxdata/kapacitor/keyvalue"
-"github.com/pkg/errors"
+	"github.com/influxdata/kapacitor/alert"
+	"github.com/influxdata/kapacitor/keyvalue"
+	"github.com/pkg/errors"
 )
 
 type Diagnostic interface {
@@ -63,7 +63,6 @@ func (s *Service) Open() error {
 		if client == nil {
 			return fmt.Errorf("no client found for Kafka broker %q", name)
 		}
-
 
 		if err := client.Connect(s.configs[name].URL); err != nil {
 			return errors.Wrapf(err, "failed to connect to Kafka broker %q", name)
@@ -177,9 +176,9 @@ func (s *Service) Handler(c HandlerConfig, ctx ...keyvalue.T) alert.Handler {
 }
 
 type HandlerConfig struct {
-	BrokerName string   `mapstructure:"broker-name"`
-	Topic      string   `mapstructure:"topic"`
-	Retained   bool     `mapstructure:"retained"`
+	BrokerName string `mapstructure:"broker-name"`
+	Topic      string `mapstructure:"topic"`
+	Retained   bool   `mapstructure:"retained"`
 }
 
 type handler struct {
@@ -197,10 +196,9 @@ func (h *handler) Handle(event alert.Event) {
 }
 
 type testOptions struct {
-	BrokerName string   `json:"broker-name"`
-	Topic      string   `json:"topic"`
-	Message    string   `json:"message"`
-
+	BrokerName string `json:"broker-name"`
+	Topic      string `json:"topic"`
+	Message    string `json:"message"`
 }
 
 func (s *Service) TestOptions() interface{} {
@@ -219,5 +217,5 @@ func (s *Service) Test(o interface{}) error {
 	}
 
 	//TODO: test case
-	return s.Alert(options.BrokerName, options.Topic, alert.EventState{ID:"a111"}, alert.EventData{Name: "ss"})
+	return s.Alert(options.BrokerName, options.Topic, alert.EventState{ID: "a111"}, alert.EventData{Name: "ss"})
 }

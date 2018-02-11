@@ -1,8 +1,7 @@
 package kafka
 
-
 import (
-"errors"
+	"errors"
 )
 
 type Config struct {

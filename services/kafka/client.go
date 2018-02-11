@@ -2,21 +2,34 @@ package kafka
 
 import (
 	//"fmt"
-	"time"
-	"strconv"
 	"encoding/json"
-	"github.com/influxdata/kapacitor/tlsconfig"
 	"github.com/Shopify/sarama"
+	"github.com/influxdata/kapacitor/tlsconfig"
+	"strconv"
+	"time"
 
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"github.com/influxdata/kapacitor/alert"
 	goavro "gopkg.in/linkedin/goavro.v1"
-	"crypto/tls"
 	"io/ioutil"
-	"crypto/x509"
 	"log"
-	"bytes"
-	"fmt"
 )
+//
+//{
+//"doc": "fields",
+//"type": "map",
+//"name": "fields",
+//"values":"double"
+//},
+//{
+//"doc": "tags",
+//"type": "map",
+//"name": "tags",
+//"values":"string"
+//},
 
 var recordSchemaJSON = `
 	{
@@ -37,16 +50,10 @@ var recordSchemaJSON = `
  		  "default": "null"
 		},
 		{
-		  "doc": "fields",
-		  "type": "map",
-		  "name": "fields",
-          "values":"double"
-		},
-		{
-		  "doc": "tags",
-		  "type": "map",
-		  "name": "tags",
-		  "values":"string"
+		"doc": "tags",
+		"type": "map",
+		"name": "tags",
+		"values":"string"
 		},
 		{
 		  "doc": "Unix epoch time in milliseconds",
@@ -75,7 +82,6 @@ var recordSchemaJSON = `
 	}
 `
 
-
 // Client describes an immutable Kafka client
 type Client interface {
 	Connect(Url string) error
@@ -98,7 +104,7 @@ var newClient = func(c Config) (*KafkaClient, error) {
 	if c.Username != "" {
 		config.Net.SASL.User = c.Username
 	}
-	if c.Password  != "" {
+	if c.Password != "" {
 		config.Net.SASL.Password = c.Password
 	}
 
@@ -109,7 +115,7 @@ var newClient = func(c Config) (*KafkaClient, error) {
 		return nil, err
 	}
 
-	if tlsConfig!=nil {
+	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
 	}
 
@@ -146,14 +152,12 @@ func createTlsConfiguration(c Config) (t *tls.Config) {
 	return t
 }
 
-
 type KafkaClient struct {
-	config * sarama.Config
+	config   *sarama.Config
 	producer sarama.AsyncProducer
 }
 
 func (k *KafkaClient) Connect(Url string) error {
-
 
 	brokers := []string{Url}
 	producer, err := sarama.NewAsyncProducer(brokers, k.config)
@@ -173,8 +177,6 @@ func (p *KafkaClient) Disconnect() {
 
 func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.EventData) error {
 
-
-
 	//j, err := json.Marshal(mainMap)
 	//fmt.Printf(string(j), err)
 	//fmt.Println("")
@@ -184,22 +186,10 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 		panic(err)
 	}
 
-
-
-
-
 	timestamp := strconv.FormatInt(state.Time.UTC().UnixNano(), 10)
 
 
-
-	var tagsMapNew map[string]interface{} = make(map[string]interface{})
-
 	var tagsMap map[string]string = data.Tags
-	for key, value := range tagsMap {
-		tagsMapNew[key] = value
-	}
-
-
 
 
 	var fieldsMap map[string]interface{} = data.Fields
@@ -209,15 +199,12 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 		fieldsMapNew[key] = fmt.Sprintf("%v", value)
 	}
 
-
-
-
 	//someRecord.Set("database", data.Database())
 	//someRecord.Set("retention", v.RetentionPolicy())
 	someRecord.Set("name", data.Name)
 	someRecord.Set("taskname", data.TaskName)
 	//someRecord.Set("fields", fieldsMapNew)
-	//someRecord.Set("tags", tagsMapNew )
+	someRecord.Set("tags", tagsMap )
 	someRecord.Set("message", state.Message)
 	someRecord.Set("timestamp", timestamp)
 	//someRecord.Set("details", state.Details)
@@ -225,12 +212,10 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 	someRecord.Set("duration", state.Duration.String())
 	someRecord.Set("id", state.ID)
 
-
 	j, err := json.Marshal(someRecord.Fields)
 	fmt.Println("")
 	fmt.Printf(string(j), err)
 	fmt.Println("")
-
 
 	codec, err := goavro.NewCodec(recordSchemaJSON)
 	if err != nil {
@@ -245,7 +230,6 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 
 	actual := bb.Bytes()
 	dataString := string(actual)
-
 
 	strTime := strconv.Itoa(int(time.Now().Unix()))
 

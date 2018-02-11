@@ -2,7 +2,7 @@ package kafka
 
 import (
 	//"fmt"
-	"encoding/json"
+	//"encoding/json"
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/kapacitor/tlsconfig"
 	"strconv"

@@ -50,12 +50,6 @@ var recordSchemaJSON = `
  		  "default": "null"
 		},
 		{
-		"doc": "tags",
-		"type": "map",
-		"name": "tags",
-		"values":"string"
-		},
-		{
 		  "doc": "Unix epoch time in milliseconds",
 		  "type": "string",
 		  "name": "timestamp"
@@ -212,10 +206,10 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 	someRecord.Set("duration", state.Duration.String())
 	someRecord.Set("id", state.ID)
 
-	j, err := json.Marshal(someRecord.Fields)
-	fmt.Println("")
-	fmt.Printf(string(j), err)
-	fmt.Println("")
+	//j, err := json.Marshal(someRecord.Fields)
+	//fmt.Println("")
+	//fmt.Printf(string(j), err)
+	//fmt.Println("")
 
 	codec, err := goavro.NewCodec(recordSchemaJSON)
 	if err != nil {

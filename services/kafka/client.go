@@ -83,7 +83,7 @@ var recordSchemaJSON = `
   		  "doc": "fields",
 		  "type": "map",
 		  "name": "fields",
-		  "values":"double"
+		  "values":"string"
 		}
 	  ]
 	}
@@ -199,7 +199,15 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 		tagsMapNew[key] = value
 	}
 
+	var fieldsMapNew map[string]interface{} = make(map[string]interface{})
 	var fieldsMap map[string]interface{} = data.Fields
+
+
+	for key, value := range fieldsMap {
+		fieldsMapNew[key] = fmt.Sprintf("%v", value)
+	}
+
+
 	someRecord.Set("name", data.Name)
 	someRecord.Set("taskname", data.TaskName)
 	someRecord.Set("message", state.Message)
@@ -208,7 +216,7 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 	someRecord.Set("duration", state.Duration.String())
 	someRecord.Set("id", state.ID)
 	someRecord.Set("tags", tagsMapNew )
-	someRecord.Set("fields", fieldsMap)
+	someRecord.Set("fields", fieldsMapNew)
 
 	codec, err := goavro.NewCodec(recordSchemaJSON)
 	if err != nil {

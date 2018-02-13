@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"log"
 )
+
 //
 //{
 //"doc": "fields",
@@ -71,6 +72,18 @@ var recordSchemaJSON = `
 		  "type": "string",
 		  "name": "id",
  		  "default": "null"
+		},
+		{
+		  "doc": "tags",
+		  "type": "map",
+		  "name": "tags",
+		  "values":"string"
+		},
+		{
+  		  "doc": "fields",
+		  "type": "map",
+		  "name": "fields",
+		  "values":"double"
 		}
 	  ]
 	}
@@ -83,7 +96,7 @@ type Client interface {
 	Publish(topic string, state alert.EventState, data alert.EventData) error
 }
 
-// newClient produces a disconnected MQTT client
+// newClient produces a disconnected Kafka client
 var newClient = func(c Config) (*KafkaClient, error) {
 	config := sarama.NewConfig()
 	config.Producer.Retry.Max = 5
@@ -101,8 +114,6 @@ var newClient = func(c Config) (*KafkaClient, error) {
 	if c.Password != "" {
 		config.Net.SASL.Password = c.Password
 	}
-
-	//opts.AddBroker(c.URL)
 
 	tlsConfig, err := tlsconfig.Create(c.SSLCA, c.SSLCert, c.SSLKey, c.InsecureSkipVerify)
 	if err != nil {
@@ -182,34 +193,22 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 
 	timestamp := strconv.FormatInt(state.Time.UTC().UnixNano(), 10)
 
+	var tagsMapNew map[string]interface{} = make(map[string]interface{})
+	var tagsMap map[string]string = data.Tags
+	for key, value := range tagsMap {
+		tagsMapNew[key] = value
+	}
 
-	//var tagsMap map[string]string = data.Tags
-
-
-	//var fieldsMap map[string]interface{} = data.Fields
-	//
-	//var fieldsMapNew map[string]string = make(map[string]string)
-	//for key, value := range fieldsMap {
-	//	fieldsMapNew[key] = fmt.Sprintf("%v..", value)
-	//}
-
-	//someRecord.Set("database", data.Database())
-	//someRecord.Set("retention", v.RetentionPolicy())
+	var fieldsMap map[string]interface{} = data.Fields
 	someRecord.Set("name", data.Name)
 	someRecord.Set("taskname", data.TaskName)
-	//someRecord.Set("fields", fieldsMapNew)
-	//someRecord.Set("tags", tagsMap )
 	someRecord.Set("message", state.Message)
 	someRecord.Set("timestamp", timestamp)
-	//someRecord.Set("details", state.Details)
 	someRecord.Set("level", state.Level.String())
 	someRecord.Set("duration", state.Duration.String())
 	someRecord.Set("id", state.ID)
-
-	//j, err := json.Marshal(someRecord.Fields)
-	//fmt.Println("")
-	//fmt.Printf(string(j), err)
-	//fmt.Println("")
+	someRecord.Set("tags", tagsMapNew )
+	someRecord.Set("fields", fieldsMap)
 
 	codec, err := goavro.NewCodec(recordSchemaJSON)
 	if err != nil {
@@ -235,9 +234,5 @@ func (p *KafkaClient) Publish(topic string, state alert.EventState, data alert.E
 
 	p.producer.Input() <- msg
 
-	//TODO: fix it
-	return nil
-
-	//fmt.Println("=============================================")
-	//return nil
+	return err
 }
